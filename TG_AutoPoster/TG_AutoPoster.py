@@ -112,8 +112,6 @@ class AutoPoster(Client):
         self.reload_config()
 
         for domain in self.config.get("domains", {}).keys():
-            if self.config["domains"][domain].get("use_long_poll"):
-                continue
             settings = {
                 **self.config.get("settings", {}),
                 **self.config["domains"][domain],
