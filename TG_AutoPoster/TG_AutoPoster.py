@@ -3,6 +3,8 @@ from importlib import import_module
 from itertools import chain
 from pathlib import Path
 
+import requests.exceptions
+import vk_api.exceptions
 import yaml
 from loguru import logger
 from pyrogram import Client
@@ -160,29 +162,36 @@ class AutoPoster(Client):
         )
         chat_ids = self.config["domains"][domain]["channel"]
         longpoll = VkBotLongPoll(self.vk_session, group_id=-group.group_id)
-        for event in longpoll.listen():
-            logger.debug("Received event: {}", event)
-            if event.type == VkBotEventType.WALL_POST_NEW:
-                for p in group.get_post(event.raw["object"]):
-                    if p:
-                        sender = Sender(
-                            bot=self,
-                            post=p,
-                            chat_ids=chat_ids
-                            if isinstance(chat_ids, list)
-                            else [chat_ids],
-                            **settings,
-                        )
-                        sender.send_post()
 
-                        self.config["domains"][domain]["last_id"] = group.last_id
-                        self.config["domains"][domain]["last_story_id"] = group.last_story_id
-                        self.config["domains"][domain]["pinned_id"] = group.pinned_id
+        while True:
+            try:
+                events = longpoll.check()
+            except (requests.exceptions.RequestException, vk_api.exceptions.VkApiError) as e:
+                logger.warning(f"longpoll exception {e}")
+                continue
+            for event in events:
+                logger.debug("Received event: {}", event)
+                if event.type == VkBotEventType.WALL_POST_NEW:
+                    for p in group.get_post(event.raw["object"]):
+                        if p:
+                            sender = Sender(
+                                bot=self,
+                                post=p,
+                                chat_ids=chat_ids
+                                if isinstance(chat_ids, list)
+                                else [chat_ids],
+                                **settings,
+                            )
+                            sender.send_post()
 
-                        self.save_config()
+                            self.config["domains"][domain]["last_id"] = group.last_id
+                            self.config["domains"][domain]["last_story_id"] = group.last_story_id
+                            self.config["domains"][domain]["pinned_id"] = group.pinned_id
 
-                        for data in self.cache_dir.iterdir():
-                            data.unlink()
+                            self.save_config()
+
+                            for data in self.cache_dir.iterdir():
+                                data.unlink()
 
     def reload_config(self):
         with self.config_path.open(encoding="utf-8") as stream:
