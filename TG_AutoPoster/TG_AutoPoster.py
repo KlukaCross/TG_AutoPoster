@@ -171,7 +171,7 @@ class AutoPoster(Client):
                 continue
             for event in events:
                 logger.debug("Received event: {}", event)
-                if event.type == VkBotEventType.WALL_POST_NEW:
+                if event.type == VkBotEventType.WALL_POST_NEW and event.object["post_type"] not in ["postpone", "suggest"]:
                     for p in group.get_post(event.raw["object"]):
                         if p:
                             sender = Sender(
