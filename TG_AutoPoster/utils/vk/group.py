@@ -94,9 +94,7 @@ class Group:
 
     def get_post(self, post) -> Iterable[Union[Post, None]]:
         is_pinned = post.get("is_pinned", False)
-        if post["id"] > self.last_id or (
-            is_pinned and post["id"] != self.pinned_id
-        ):
+        if post["id"] > self.last_id and post.get("post_type", None) not in ["postpone", "suggest"]:
             logger.info("[VK] Обнаружен новый пост с ID {}", post["id"])
             if post.get("marked_as_ads", 0):
                 logger.info("[VK] Пост рекламный. Он будет пропущен.")
