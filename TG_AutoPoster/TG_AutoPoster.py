@@ -114,6 +114,8 @@ class AutoPoster(Client):
         self.reload_config()
 
         for domain in self.config.get("domains", {}).keys():
+            if self.config["domains"][domain].get("use_long_poll"):
+                continue
             settings = {
                 **self.config.get("settings", {}),
                 **self.config["domains"][domain],
@@ -171,7 +173,8 @@ class AutoPoster(Client):
                 continue
             for event in events:
                 logger.debug("Received event: {}", event)
-                if event.type == VkBotEventType.WALL_POST_NEW and event.object["post_type"] not in ["postpone", "suggest"]:
+                if event.type == VkBotEventType.WALL_POST_NEW and \
+                        event.object["post_type"] not in ["postpone", "suggest"]:
                     for p in group.get_post(event.raw["object"]):
                         if p:
                             sender = Sender(
